@@ -31,7 +31,7 @@ impl GlobalFilters {
         Ok(filter)
     }
 
-    pub fn iter(&self) -> Iter<String, RemoteFilter> {
+    pub fn iter(&self) -> Iter<'_, String, RemoteFilter> {
         self.filters.iter()
     }
 
