@@ -2,8 +2,8 @@ use super::{
     DevelopmentExport, Export, FilterDefinition, FilterRunner, LocalExport, Profile, RemoteFilter,
     UserConfig,
 };
+use crate::file_watcher::FileWatcher;
 use crate::fs::{read_json, write_file, write_json};
-use crate::watcher::Watcher;
 use anyhow::{anyhow, Context, Result};
 use indexmap::IndexMap;
 use jsonc_parser::cst::{CstObject, CstRootNode};
@@ -139,14 +139,14 @@ impl Config {
     }
 
     pub fn watch_project_files(&self) -> Result<()> {
-        let mut watcher = Watcher::new()?;
+        let mut watcher = FileWatcher::new()?;
 
-        watcher.watch("./config.json")?;
-        watcher.watch(self.get_behavior_pack())?;
-        watcher.watch(self.get_resource_pack())?;
-        watcher.watch(self.get_data_path())?;
+        watcher.add_path("./config.json")?;
+        watcher.add_path(self.get_behavior_pack())?;
+        watcher.add_path(self.get_resource_pack())?;
+        watcher.add_path(self.get_data_path())?;
 
-        watcher.wait_changes();
+        smol::block_on(watcher.wait_changes());
 
         Ok(())
     }

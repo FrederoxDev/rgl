@@ -1,8 +1,8 @@
 mod commands;
+mod file_watcher;
 mod fs;
 mod logger;
 mod rgl;
-mod watcher;
 
 use anyhow::{Context, Result};
 use clap::{crate_name, Parser, Subcommand};

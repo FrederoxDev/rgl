@@ -17,8 +17,7 @@ enum_dispatch = "0.3.13"
 fslock = "0.2.1"
 indexmap = { version = "2.10.0", features = ["serde"] }
 jsonc-parser = { version = "0.26.3", features = ["cst", "serde"] }
-notify = "8.1.0"
-notify-debouncer-mini = "0.6.0"
+notify = "8.2.0"
 once_cell = "1.21.3"
 oxide_eval = { version = "0.1.2", features = ["math", "string", "semver-support"] }
 paris = { version = "1.5.15", features = ["macros"] }
