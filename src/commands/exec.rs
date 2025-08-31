@@ -25,8 +25,12 @@ impl Command for Exec {
         let temp = Temp::from_dot_regolith();
 
         empty_dir(&temp.root)?;
-        copy_dir(&bp, &temp.bp)?;
-        copy_dir(&rp, &temp.rp)?;
+        if let Some(bp) = &bp {
+            copy_dir(bp, &temp.bp)?;
+        }
+        if let Some(rp) = &rp {
+            copy_dir(rp, &temp.rp)?;
+        }
         copy_dir(&data, &temp.data)?;
 
         if let Ok(filter) = config.get_filter(&self.filter) {
@@ -41,15 +45,15 @@ impl Command for Exec {
             filter.run(&context, &temp.root, &self.run_args)?;
         }
 
-        info!(
-            "Applying changes to source directory: \n\
-             \tBP: {} \n\
-             \tRP: {}",
-            bp.display(),
-            rp.display()
-        );
-        sync_dir(temp.bp, bp)?;
-        sync_dir(temp.rp, rp)?;
+        info!("Applying changes to source directory:");
+        if let Some(bp) = bp {
+            println!("\tBP: {}", bp.display());
+            sync_dir(temp.bp, bp)?;
+        }
+        if let Some(rp) = rp {
+            println!("\tRP: {}", rp.display());
+            sync_dir(temp.rp, rp)?;
+        }
         sync_dir(temp.data, data)?;
 
         info!("Successfully executed filter <b>{}</>", self.filter);

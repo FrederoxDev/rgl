@@ -4,7 +4,7 @@ use super::{
 };
 use crate::file_watcher::FileWatcher;
 use crate::fs::{read_json, write_file, write_json};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use indexmap::IndexMap;
 use jsonc_parser::cst::{CstObject, CstRootNode};
 use jsonc_parser::{json, ParseOptions};
@@ -26,8 +26,10 @@ pub struct Config {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Packs {
-    behavior_pack: String,
-    resource_pack: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    behavior_pack: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    resource_pack: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -65,8 +67,8 @@ impl Config {
             author: Some(UserConfig::username()),
             name,
             packs: Packs {
-                behavior_pack: "./packs/BP".to_owned(),
-                resource_pack: "./packs/RP".to_owned(),
+                behavior_pack: Some("./packs/BP".to_owned()),
+                resource_pack: Some("./packs/RP".to_owned()),
             },
             regolith: Regolith {
                 data_path: "./data".to_owned(),
@@ -77,7 +79,11 @@ impl Config {
     }
 
     pub fn load() -> Result<Self> {
-        read_json("./config.json")
+        let config = read_json::<Config>("./config.json")?;
+        if config.packs.behavior_pack.is_none() && config.packs.resource_pack.is_none() {
+            bail!("Must specify at least one of `behaviorPack` or `resourcePack` in 'packs'")
+        }
+        Ok(config)
     }
 
     pub fn save(&self) -> Result<()> {
@@ -88,12 +94,12 @@ impl Config {
         &self.name
     }
 
-    pub fn get_behavior_pack(&self) -> PathBuf {
-        PathBuf::from(&self.packs.behavior_pack)
+    pub fn get_behavior_pack(&self) -> Option<PathBuf> {
+        Some(PathBuf::from(&self.packs.behavior_pack.to_owned()?))
     }
 
-    pub fn get_resource_pack(&self) -> PathBuf {
-        PathBuf::from(&self.packs.resource_pack)
+    pub fn get_resource_pack(&self) -> Option<PathBuf> {
+        Some(PathBuf::from(&self.packs.resource_pack.to_owned()?))
     }
 
     pub fn get_data_path(&self) -> PathBuf {
@@ -142,8 +148,12 @@ impl Config {
         let mut watcher = FileWatcher::new()?;
 
         watcher.add_path("./config.json")?;
-        watcher.add_path(self.get_behavior_pack())?;
-        watcher.add_path(self.get_resource_pack())?;
+        if let Some(bp) = self.get_behavior_pack() {
+            watcher.add_path(bp)?;
+        }
+        if let Some(rp) = self.get_resource_pack() {
+            watcher.add_path(rp)?;
+        }
         watcher.add_path(self.get_data_path())?;
 
         Ok(watcher)
