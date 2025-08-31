@@ -1,6 +1,7 @@
 use super::{Config, Eval, Export, Filter, FilterContext};
 use crate::{debug, info, measure_time};
 use anyhow::{bail, Context, Result};
+use async_recursion::async_recursion;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -32,7 +33,13 @@ pub enum FilterRunner {
 }
 
 impl Profile {
-    pub fn run(&self, config: &Config, temp: &Path, root_profile: &str) -> Result<HashSet<String>> {
+    #[async_recursion]
+    pub async fn run(
+        &self,
+        config: &Config,
+        temp: &Path,
+        root_profile: &str,
+    ) -> Result<HashSet<String>> {
         let mut export_data_names = HashSet::new();
         for entry in self.filters.iter() {
             match entry {
@@ -80,8 +87,11 @@ impl Profile {
                     let profile = config.get_profile(profile_name)?;
 
                     info!("Running <b>{profile_name}</> nested profile");
-                    export_data_names.extend(profile.run(config, temp, root_profile)?);
+                    export_data_names.extend(profile.run(config, temp, root_profile).await?);
                 }
+            }
+            for _ in 0..5 {
+                smol::future::yield_now().await;
             }
         }
         Ok(export_data_names)

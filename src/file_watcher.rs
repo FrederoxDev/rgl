@@ -13,9 +13,14 @@ impl FileWatcher {
         let (tx, rx) = channel::unbounded();
         let watcher = recommended_watcher(move |event: notify::Result<Event>| {
             if let Ok(e) = event {
-                if !e.kind.is_access() && !e.kind.is_other() {
-                    let _ = tx.send_blocking(());
+                if e.kind.is_access() || e.kind.is_other() {
+                    return;
                 }
+                #[cfg(windows)]
+                if e.kind.is_modify() && e.paths.iter().all(|p| p.is_dir()) {
+                    return;
+                }
+                let _ = tx.send_blocking(());
             }
         })
         .context("Failed to create file watcher")?;
@@ -36,14 +41,18 @@ impl FileWatcher {
 
     pub async fn wait_changes(&self) {
         let _ = self.rx.recv().await;
+    }
+
+    pub async fn wait_debounced(&self, timeout: Duration) {
+        self.wait_changes().await;
         loop {
-            let stop = smol::future::race(
+            let stop = smol::future::or(
                 async {
-                    let _ = self.rx.recv().await;
+                    self.wait_changes().await;
                     false
                 },
                 async {
-                    Timer::after(Duration::from_millis(100)).await;
+                    Timer::after(timeout).await;
                     true
                 },
             )
@@ -52,5 +61,9 @@ impl FileWatcher {
                 break;
             }
         }
+    }
+
+    pub fn flush(&self) {
+        while self.rx.try_recv().is_ok() {}
     }
 }

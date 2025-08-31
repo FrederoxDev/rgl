@@ -30,7 +30,7 @@ impl Command for Apply {
         copy_dir(&data, &temp.data)?;
 
         info!("Running <b>{}</> profile", self.profile);
-        profile.run(&config, &temp.root, &self.profile)?;
+        smol::block_on(profile.run(&config, &temp.root, &self.profile))?;
 
         info!(
             "Applying changes to source directory: \n\

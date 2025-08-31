@@ -8,6 +8,7 @@ name = "rgl"
 
 [dependencies]
 anyhow = "1.0.98"
+async-recursion = "1.1.1"
 async-tungstenite = "0.30.0"
 clap = { version = "4.5.42", features = ["cargo", "derive"] }
 dashmap = "6.1.0"

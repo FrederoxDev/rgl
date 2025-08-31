@@ -3,6 +3,7 @@ use crate::rgl::{runner, Config, MinecraftServer, Session, UserConfig};
 use crate::{error, info, log, warn};
 use anyhow::Result;
 use clap::Args;
+use std::time::Duration;
 
 /// Watch for file changes and restart automatically
 #[derive(Args)]
@@ -34,25 +35,40 @@ impl Command for Watch {
         smol::block_on(async {
             loop {
                 let config = Config::load()?;
+                let watcher = config.get_watcher()?;
                 let mut session = Session::lock()?;
 
-                if let Err(e) = runner(&config, &self.profile, self.clean, compat) {
-                    error!("{}", self.error_context());
-                    e.chain().for_each(|e| log!("<red>[+]</> {e}"));
+                let is_interrupted = smol::future::or(
+                    async {
+                        if let Err(e) = runner(&config, &self.profile, self.clean, compat).await {
+                            error!("{}", self.error_context());
+                            e.chain().for_each(|e| log!("<red>[+]</> {e}"));
+                        }
+                        false
+                    },
+                    async {
+                        watcher.wait_changes().await;
+                        true
+                    },
+                )
+                .await;
+
+                if !is_interrupted {
+                    if let Some(server) = &server {
+                        server.run_command("reload").await;
+                        server
+                            .run_command(
+                                r#"tellraw @s {"rawtext": [{"translate": "commands.reload.success"}]}"#,
+                            )
+                            .await;
+                    }
+
+                    info!("Watching for changes...");
+                    info!("Press Ctrl+C to stop watching");
+                    watcher.flush();
+                    watcher.wait_debounced(Duration::from_millis(500)).await;
                 }
 
-                if let Some(server) = &server {
-                    server.run_command("reload").await;
-                    server
-                        .run_command(
-                            r#"tellraw @s {"rawtext": [{"translate": "commands.reload.success"}]}"#,
-                        )
-                        .await;
-                }
-
-                info!("Watching for changes...");
-                info!("Press Ctrl+C to stop watching");
-                config.watch_project_files()?;
                 warn!("Changes detected, restarting...");
                 session.unlock()?;
             }

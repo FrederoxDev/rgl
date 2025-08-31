@@ -138,7 +138,7 @@ impl Config {
         Ok(filters)
     }
 
-    pub fn watch_project_files(&self) -> Result<()> {
+    pub fn get_watcher(&self) -> Result<FileWatcher> {
         let mut watcher = FileWatcher::new()?;
 
         watcher.add_path("./config.json")?;
@@ -146,9 +146,7 @@ impl Config {
         watcher.add_path(self.get_resource_pack())?;
         watcher.add_path(self.get_data_path())?;
 
-        smol::block_on(watcher.wait_changes());
-
-        Ok(())
+        Ok(watcher)
     }
 }
 
