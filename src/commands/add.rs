@@ -23,20 +23,20 @@ impl Command for Add {
         let data_path = config.get_data_path();
 
         for arg in &self.filters {
-            info!("Adding filter <b>{}</>...", arg);
+            info!("Adding filter <filter>{arg}</>...");
             let (filter_name, remote) = RemoteFilter::parse(arg)?;
             remote.install(&filter_name, Some(&data_path), self.force)?;
 
             for profile_name in &self.profile {
                 if config_cst.add_filter_to_profile(&filter_name, profile_name) {
-                    info!("Added filter <b>{filter_name}</> to <b>{profile_name}</> profile");
+                    info!("Added filter <filter>{filter_name}</> to <profile>{profile_name}</> profile");
                 } else {
-                    warn!("Profile <b>{profile_name}</> not found, skipping...")
+                    warn!("Profile <profile>{profile_name}</> not found, skipping...")
                 }
             }
 
             config_cst.add_filter(&filter_name, remote);
-            info!("Filter <b>{filter_name}</> successfully added");
+            info!("Filter <filter>{filter_name}</> successfully added");
         }
 
         config_cst.save()?;

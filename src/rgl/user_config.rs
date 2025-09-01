@@ -115,7 +115,7 @@ fn get_user_config() -> &'static UserConfig {
             warn!("Failed to load user config, creating a new one...");
             let user_config = UserConfig::default();
             if let Err(e) = write_json(path, &user_config) {
-                warn!("Failed to write default user config: {}", e);
+                warn!("Failed to write default user config: {e}");
             }
             user_config
         })

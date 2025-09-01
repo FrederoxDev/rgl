@@ -33,7 +33,7 @@ impl Command for Apply {
         }
         copy_dir(&data, &temp.data)?;
 
-        info!("Running <b>{}</> profile", self.profile);
+        info!("Running <profile>{}</> profile", self.profile);
         smol::block_on(profile.run(&config, &temp.root, &self.profile))?;
 
         info!("Applying changes to source directory:");
@@ -47,10 +47,10 @@ impl Command for Apply {
         }
         sync_dir(temp.data, data)?;
 
-        info!("Successfully applied profile <b>{}</>", self.profile);
+        info!("Successfully applied profile <profile>{}</>", self.profile);
         session.unlock()
     }
     fn error_context(&self) -> String {
-        format!("Error applying profile <b>{}</>", self.profile)
+        format!("Error applying profile <profile>{}</>", self.profile)
     }
 }

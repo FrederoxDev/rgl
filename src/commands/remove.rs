@@ -20,9 +20,9 @@ impl Command for Remove {
         let mut session = Session::lock()?;
         for name in &self.filters {
             if config_cst.remove_filter(name) {
-                info!("Removed filter <b>{name}</>");
+                info!("Removed filter <filter>{name}</>");
             } else {
-                warn!("Filter <b>{name}</> not found");
+                warn!("Filter <filter>{name}</> not found");
             }
         }
         config_cst.save()?;

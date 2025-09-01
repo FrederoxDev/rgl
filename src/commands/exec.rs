@@ -34,13 +34,13 @@ impl Command for Exec {
         copy_dir(&data, &temp.data)?;
 
         if let Ok(filter) = config.get_filter(&self.filter) {
-            info!("Running filter <b>{}</>", self.filter);
+            info!("Running filter <filter>{}</>", self.filter);
             let context = FilterContext::new(&self.filter, &filter)?;
             filter.run(&context, &temp.root, &self.run_args)?;
         } else {
             let global_filters = GlobalFilters::load()?;
             let filter = global_filters.get(&self.filter)?.into();
-            info!("Running global filter <b>{}</>", self.filter);
+            info!("Running global filter <filter>{}</>", self.filter);
             let context = FilterContext::new(&self.filter, &filter)?;
             filter.run(&context, &temp.root, &self.run_args)?;
         }
@@ -56,10 +56,10 @@ impl Command for Exec {
         }
         sync_dir(temp.data, data)?;
 
-        info!("Successfully executed filter <b>{}</>", self.filter);
+        info!("Successfully executed filter <filter>{}</>", self.filter);
         session.unlock()
     }
     fn error_context(&self) -> String {
-        format!("Error executing filter <b>{}</>", self.filter)
+        format!("Error executing filter <filter>{}</>", self.filter)
     }
 }

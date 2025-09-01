@@ -25,7 +25,7 @@ impl Resolver {
             .context("Failed to load filter resolver")?
             .filters
             .get(name)
-            .context(format!("Failed to resolve filter <b>{name}</>"))
+            .with_context(|| format!("Failed to resolve filter <filter>{name}</>"))
     }
 
     pub fn resolve_url(name: &str) -> Result<String> {
@@ -59,9 +59,9 @@ impl Resolver {
             let output = Subprocess::new("git")
                 .args(["ls-remote", &https_url, &tag])
                 .run_silent()
-                .context(format!(
-                    "Failed to check version from `{url}`. Is the url correct?"
-                ))?;
+                .with_context(|| {
+                    format!("Failed to check version from `{url}`. Is the url correct?")
+                })?;
             let output = String::from_utf8(output.stdout)?;
             if output.split('\n').any(|line| line.ends_with(&tag)) {
                 return Ok(version.to_string());
@@ -71,9 +71,9 @@ impl Resolver {
             let output = Subprocess::new("git")
                 .args(["ls-remote", "--tags", &https_url])
                 .run_silent()
-                .context(format!(
-                    "Failed to get latest version from `{url}`. Is the url correct?"
-                ))?;
+                .with_context(|| {
+                    format!("Failed to get latest version from `{url}`. Is the url correct?")
+                })?;
             let output = String::from_utf8(output.stdout)?;
             let mut versions: Vec<Version> = output
                 .split('\n')
@@ -92,9 +92,9 @@ impl Resolver {
             let output = Subprocess::new("git")
                 .args(["ls-remote", "--symref", &https_url, "HEAD"])
                 .run_silent()
-                .context(format!(
-                    "Failed to get HEAD version from `{url}`. Is the url correct?"
-                ))?;
+                .with_context(|| {
+                    format!("Failed to get HEAD version from `{url}`. Is the url correct?")
+                })?;
             let output = String::from_utf8(output.stdout)?;
             let sha = output
                 .split('\n')
@@ -120,7 +120,7 @@ fn get_resolver() -> Result<&'static Resolver> {
         let mut resolver = Resolver::default();
         for resolver_url in UserConfig::resolvers() {
             let (url, path) = parse_resolver_url(&resolver_url)
-                .context(format!("Failed to parse url `{resolver_url}`",))?;
+                .with_context(|| format!("Failed to parse url `{resolver_url}`",))?;
             let resolver_dir = get_resolver_cache_dir()?.join(&url);
             let resolver_file = resolver_dir.join(&path);
             let https_url = format!("https://{url}");
@@ -130,7 +130,7 @@ fn get_resolver() -> Result<&'static Resolver> {
                     .args(["clone", &https_url, "."])
                     .current_dir(&resolver_dir)
                     .run_silent()
-                    .context(format!("Failed to clone `{https_url}`"))?;
+                    .with_context(|| format!("Failed to clone `{https_url}`"))?;
             } else {
                 let last_modified = resolver_file.metadata()?.modified()?.elapsed()?.as_secs();
                 if last_modified > UserConfig::resolver_update_interval() {
@@ -138,7 +138,7 @@ fn get_resolver() -> Result<&'static Resolver> {
                         .args(["pull"])
                         .current_dir(&resolver_dir)
                         .run_silent()
-                        .context(format!("Failed to pull `{https_url}`"))?;
+                        .with_context(|| format!("Failed to pull `{https_url}`"))?;
                     set_modified_time(&resolver_file, SystemTime::now())?;
                 }
             }

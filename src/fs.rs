@@ -30,13 +30,15 @@ fn copy_dir_impl(from: &Path, to: &Path) -> Result<()> {
 pub fn copy_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
     let from = from.as_ref();
     let to = to.as_ref();
-    copy_dir_impl(from, to).context(format!(
-        "Failed to copy directory\n\
-         <yellow> >></> From: {}\n\
-         <yellow> >></> To: {}",
-        from.display(),
-        to.display(),
-    ))
+    copy_dir_impl(from, to).with_context(|| {
+        format!(
+            "Failed to copy directory\n\
+             <yellow> >></> From: {}\n\
+             <yellow> >></> To: {}",
+            from.display(),
+            to.display(),
+        )
+    })
 }
 
 fn empty_dir_impl(path: &Path) -> Result<()> {
@@ -47,11 +49,13 @@ fn empty_dir_impl(path: &Path) -> Result<()> {
 
 pub fn empty_dir(path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref();
-    empty_dir_impl(path).context(format!(
-        "Failed to empty directory\n\
-         <yellow> >></> Path: {}",
-        path.display(),
-    ))
+    empty_dir_impl(path).with_context(|| {
+        format!(
+            "Failed to empty directory\n\
+             <yellow> >></> Path: {}",
+            path.display(),
+        )
+    })
 }
 
 pub fn read_json<T>(path: impl AsRef<Path>) -> Result<T>
@@ -66,11 +70,13 @@ where
         let json = serde_json::from_value(value)?;
         Ok(json)
     };
-    inner().context(format!(
-        "Failed to read JSON file\n\
-         <yellow> >></> Path: {}",
-        path.display()
-    ))
+    inner().with_context(|| {
+        format!(
+            "Failed to read JSON file\n\
+             <yellow> >></> Path: {}",
+            path.display()
+        )
+    })
 }
 
 pub fn rimraf(path: impl AsRef<Path>) -> Result<()> {
@@ -118,17 +124,21 @@ pub fn rimraf(path: impl AsRef<Path>) -> Result<()> {
         Err(e) => bail!(e),
     };
     if metadata.is_dir() {
-        rimraf_impl(path).context(format!(
-            "Failed to remove directory\n\
-             <yellow> >></> Path: {}",
-            path.display()
-        ))
+        rimraf_impl(path).with_context(|| {
+            format!(
+                "Failed to remove directory\n\
+                 <yellow> >></> Path: {}",
+                path.display()
+            )
+        })
     } else {
-        remove_entry(path, &metadata).context(format!(
-            "Failed to remove\n\
-             <yellow> >></> Path: {}",
-            path.display()
-        ))
+        remove_entry(path, &metadata).with_context(|| {
+            format!(
+                "Failed to remove\n\
+                 <yellow> >></> Path: {}",
+                path.display()
+            )
+        })
     }
 }
 
@@ -144,11 +154,13 @@ pub fn set_modified_time(path: impl AsRef<Path>, time: SystemTime) -> Result<()>
             .open(&path)?
             .set_modified(time)
     };
-    inner().context(format!(
-        "Failed to set modified time\n\
-         <yellow> >></> Path: {}",
-        path.as_ref().display(),
-    ))
+    inner().with_context(|| {
+        format!(
+            "Failed to set modified time\n\
+             <yellow> >></> Path: {}",
+            path.as_ref().display(),
+        )
+    })
 }
 
 #[cfg(unix)]
@@ -172,22 +184,26 @@ fn symlink_impl(from: &Path, to: &Path) -> io::Result<()> {
 pub fn symlink(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
     let from = from.as_ref();
     let to = to.as_ref();
-    symlink_impl(from, to).context(format!(
-        "Failed to create symlink\n\
-         <yellow> >></> From: {}\n\
-         <yellow> >></> To: {}",
-        from.display(),
-        to.display()
-    ))
+    symlink_impl(from, to).with_context(|| {
+        format!(
+            "Failed to create symlink\n\
+             <yellow> >></> From: {}\n\
+             <yellow> >></> To: {}",
+            from.display(),
+            to.display()
+        )
+    })
 }
 
 pub fn write_file<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     let path = path.as_ref();
-    fs::write(path, contents).context(format!(
-        "Failed to write file\n\
-         <yellow> >></> Path: {}",
-        path.display()
-    ))
+    fs::write(path, contents).with_context(|| {
+        format!(
+            "Failed to write file\n\
+             <yellow> >></> Path: {}",
+            path.display()
+        )
+    })
 }
 
 pub fn write_json<T>(path: impl AsRef<Path>, data: &T) -> Result<()>
@@ -200,11 +216,13 @@ where
         write_file(path, data + "\n")?;
         Ok(())
     };
-    inner().context(format!(
-        "Failed to write JSON file\n\
-         <yellow> >></> Path: {}",
-        path.display()
-    ))
+    inner().with_context(|| {
+        format!(
+            "Failed to write JSON file\n\
+             <yellow> >></> Path: {}",
+            path.display()
+        )
+    })
 }
 
 /// Sync target directory with source directory.
@@ -273,11 +291,13 @@ pub fn sync_dir(source: impl AsRef<Path>, target: impl AsRef<Path>) -> Result<()
                     if is_dir {
                         rimraf(target)?;
                     } else {
-                        fs::remove_file(&target).context(format!(
-                            "Failed to remove file\n\
-                         <yellow> >></> Path: {}",
-                            target.display(),
-                        ))?;
+                        fs::remove_file(&target).with_context(|| {
+                            format!(
+                                "Failed to remove file\n\
+                                 <yellow> >></> Path: {}",
+                                target.display(),
+                            )
+                        })?;
                     }
                 } else if is_dir {
                     cleanup(&source, &target)?;
@@ -289,13 +309,15 @@ pub fn sync_dir(source: impl AsRef<Path>, target: impl AsRef<Path>) -> Result<()
     let source = source.as_ref();
     let target = target.as_ref();
     if get_metadata(target).is_some_and(|m| m.is_dir()) {
-        sync(source, target).context(format!(
-            "Failed to copy directory\n\
-             <yellow> >></> From: {}\n\
-             <yellow> >></> To: {}",
-            source.display(),
-            target.display(),
-        ))?;
+        sync(source, target).with_context(|| {
+            format!(
+                "Failed to copy directory\n\
+                 <yellow> >></> From: {}\n\
+                 <yellow> >></> To: {}",
+                source.display(),
+                target.display(),
+            )
+        })?;
         cleanup(source, target)?;
     } else {
         copy_dir(source, target)?;

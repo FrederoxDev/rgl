@@ -110,7 +110,7 @@ impl Config {
         self.regolith
             .profiles
             .get(profile_name)
-            .context(format!("Profile <b>{profile_name}</> not found"))
+            .with_context(|| format!("Profile <profile>{profile_name}</> not found"))
     }
 
     pub fn get_filter(&self, filter_name: &str) -> Result<FilterDefinition> {
@@ -118,13 +118,13 @@ impl Config {
             .regolith
             .filter_definitions
             .get(filter_name)
-            .context(format!(
-                "Filter <b>{filter_name}</> is not defined in filterDefinitions"
-            ))?
+            .with_context(|| {
+                format!("Filter <filter>{filter_name}</> is not defined in filterDefinitions")
+            })?
             .to_owned();
         FilterDefinition::from_value(value).map_err(|e| {
             anyhow!(
-                "Invalid filter definition for <b>{filter_name}</>\n\
+                "Invalid filter definition for <filter>{filter_name}</>\n\
                  <yellow> >></> {e}"
             )
         })
@@ -135,7 +135,7 @@ impl Config {
         for (name, value) in &self.regolith.filter_definitions {
             let filter = FilterDefinition::from_value(value.to_owned()).map_err(|e| {
                 anyhow!(
-                    "Invalid filter definition for <b>{name}</>\n\
+                    "Invalid filter definition for <filter>{name}</>\n\
                      <yellow> >></> {e}"
                 )
             })?;

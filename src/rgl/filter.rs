@@ -65,11 +65,13 @@ impl FilterContext {
             FilterDefinition::Remote(remote) => {
                 let filter_dir = get_filter_cache_dir(name, remote)?;
                 if is_dir_empty(&filter_dir)? {
-                    info!("Filter {name} is not installed, installing...");
+                    info!("Filter <filter>{name}</> is not installed, installing...");
                     remote.install(name, None, false)?;
                 }
-                let remote_config = read_json(filter_dir.join("filter.json"))
-                    .context(format!("Failed to load config for filter <b>{}</>", name))?;
+                let remote_config =
+                    read_json(filter_dir.join("filter.json")).with_context(|| {
+                        format!("Failed to load config for filter <filter>{name}</>")
+                    })?;
                 Ok(Self {
                     name: name.to_owned(),
                     filter_dir,

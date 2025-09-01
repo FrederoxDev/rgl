@@ -95,7 +95,7 @@ impl Subprocess {
             _ => None,
         };
         if let Some(link) = install_link {
-            message.push_str(&format!(". Install it from {}", link));
+            message.push_str(&format!(". Install it from {link}"));
         }
         anyhow!(message)
     }

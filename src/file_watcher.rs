@@ -32,11 +32,13 @@ impl FileWatcher {
         let path = path.as_ref();
         self.watcher
             .watch(path, RecursiveMode::Recursive)
-            .context(format!(
-                "Failed to watch directory\n\
-                 <yellow> >></> Path: {}",
-                path.display()
-            ))
+            .with_context(|| {
+                format!(
+                    "Failed to watch directory\n\
+                     <yellow> >></> Path: {}",
+                    path.display()
+                )
+            })
     }
 
     pub async fn wait_changes(&self) {

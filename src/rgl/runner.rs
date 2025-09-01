@@ -63,12 +63,12 @@ pub async fn runner(config: &Config, profile_name: &str, clean: bool, compat: bo
     smol::future::yield_now().await;
 
     measure_time!(profile_name, {
-        info!("Running <b>{profile_name}</> profile");
+        info!("Running <profile>{profile_name}</> profile");
         let export_data_names = profile.run(config, &temp.root, profile_name).await?;
         for name in export_data_names {
             let filter_data = temp.data.join(&name);
             if filter_data.is_dir() {
-                debug!("Exporting data for filter <b>{name}</>");
+                debug!("Exporting data for filter <filter>{name}</>");
                 sync_dir(filter_data, data.join(name))?;
             }
         }
@@ -91,6 +91,6 @@ pub async fn runner(config: &Config, profile_name: &str, clean: bool, compat: bo
         }
     });
 
-    info!("Successfully ran the <b>{profile_name}</> profile");
+    info!("Successfully ran the <profile>{profile_name}</> profile");
     Ok(())
 }

@@ -63,18 +63,18 @@ impl Profile {
                         if let Some(expression) = expression {
                             let eval =
                                 Eval::new(root_profile, &context.filter_dir, settings.clone());
-                            debug!("Evaluating expression <b>{expression}</>");
+                            debug!("Evaluating expression: <d>{expression}</>");
                             if !eval.bool(expression).with_context(|| {
-                                format!("Failed running evaluator for <b>{filter_name}</>")
+                                format!("Failed running evaluator for <filter>{filter_name}</>")
                             })? {
-                                info!("Skipping filter <b>{filter_name}</>");
+                                info!("Skipping filter <filter>{filter_name}</>");
                                 continue;
                             }
                         }
-                        info!("Running filter <b>{filter_name}</>");
-                        filter
-                            .run(&context, temp, &run_args)
-                            .context(format!("Failed running filter <b>{filter_name}</>"))?;
+                        info!("Running filter <filter>{filter_name}</>");
+                        filter.run(&context, temp, &run_args).with_context(|| {
+                            format!("Failed running filter <filter>{filter_name}</>")
+                        })?;
                         if context.remote_config.is_some_and(|cfg| cfg.export_data) {
                             export_data_names.insert(filter_name.to_owned());
                         }
@@ -82,11 +82,11 @@ impl Profile {
                 }
                 FilterRunner::ProfileFilter { profile_name } => {
                     if profile_name == root_profile {
-                        bail!("Found circular profile reference in <b>{profile_name}</>");
+                        bail!("Found circular profile reference in <profile>{profile_name}</>");
                     }
                     let profile = config.get_profile(profile_name)?;
 
-                    info!("Running <b>{profile_name}</> nested profile");
+                    info!("Running <profile>{profile_name}</> nested profile");
                     export_data_names.extend(profile.run(config, temp, root_profile).await?);
                 }
             }

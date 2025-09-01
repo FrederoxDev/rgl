@@ -31,6 +31,6 @@ impl Command for Run {
         session.unlock()
     }
     fn error_context(&self) -> String {
-        format!("Error running <b>{}</> profile", self.profile)
+        format!("Error running <profile>{}</> profile", self.profile)
     }
 }

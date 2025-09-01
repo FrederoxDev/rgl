@@ -16,9 +16,9 @@ impl Command for Uninstall {
         let mut global_filters = GlobalFilters::load()?;
         for name in &self.filters {
             if global_filters.remove(name).is_some() {
-                info!("Uninstalled filter <b>{name}</>");
+                info!("Uninstalled filter <filter>{name}</>");
             } else {
-                warn!("Filter <b>{name}</> not found");
+                warn!("Filter <filter>{name}</> not found");
             }
         }
         global_filters.save()

@@ -10,7 +10,13 @@ static DEBUG_FLAG: AtomicBool = AtomicBool::new(false);
 
 fn get_logger() -> MutexGuard<'static, paris::Logger<'static>> {
     static LOGGER: OnceLock<Mutex<paris::Logger<'static>>> = OnceLock::new();
-    let logger = LOGGER.get_or_init(|| Mutex::new(paris::Logger::new()));
+    let logger = LOGGER.get_or_init(|| {
+        let mut logger = paris::Logger::new();
+        logger
+            .add_style("filter", vec!["bright-green"])
+            .add_style("profile", vec!["bright-cyan"]);
+        Mutex::new(logger)
+    });
     logger.lock().unwrap()
 }
 
@@ -22,15 +28,15 @@ impl Logger {
     }
 
     pub fn info<T: Display>(message: T) {
-        Logger::log(format!("<blue>[INFO]</> {}", message));
+        Logger::log(format!("<blue>[INFO]</> {message}"));
     }
 
     pub fn warn<T: Display>(message: T) {
-        Logger::log(format!("<yellow>[WARN]</> {}", message));
+        Logger::log(format!("<yellow>[WARN]</> {message}"));
     }
 
     pub fn error<T: Display>(message: T) {
-        Logger::log(format!("<red>[ERROR]</> {}", message));
+        Logger::log(format!("<red>[ERROR]</> {message}"));
     }
 
     pub fn get_debug() -> bool {
@@ -43,7 +49,7 @@ impl Logger {
 
     pub fn debug<T: Display>(message: T) {
         if DEBUG_FLAG.load(Ordering::Relaxed) {
-            Logger::log(format!("<magenta>[DEBUG]</> {}", message))
+            Logger::log(format!("<magenta>[DEBUG]</> {message}"))
         }
     }
 
@@ -52,7 +58,7 @@ impl Logger {
     }
 
     pub fn success<T: Display>(message: T) {
-        Logger::log(format!("<green>[DONE]</> {}", message));
+        Logger::log(format!("<green>[DONE]</> {message}"));
     }
 }
 

@@ -26,7 +26,7 @@ impl GlobalFilters {
         let filter = self
             .filters
             .get(name)
-            .context(format!("Filter <b>{name}</> is not installed"))?
+            .with_context(|| format!("Filter <filter>{name}</> is not installed"))?
             .to_owned();
         Ok(filter)
     }
