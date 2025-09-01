@@ -66,7 +66,7 @@ impl Command for Watch {
                     info!("Watching for changes...");
                     info!("Press Ctrl+C to stop watching");
                     watcher.flush();
-                    watcher.wait_debounced(Duration::from_millis(500)).await;
+                    watcher.wait_debounced(Duration::from_millis(100)).await;
                 }
 
                 warn!("Changes detected, restarting...");
