@@ -1,6 +1,4 @@
-use super::{
-    find_education_mojang_dir, find_mojang_dir, find_preview_mojang_dir, get_current_dir, Eval,
-};
+use super::{find_mojang_dir, find_world_dir, get_current_dir, Eval, MinecraftBuild};
 use anyhow::{anyhow, bail, Result};
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
@@ -17,6 +15,7 @@ pub enum Export {
     Local(LocalExport),
     Exact(ExactExport),
     None(NoneExport),
+    World(WorldExport),
 }
 
 #[enum_dispatch(Export)]
@@ -35,25 +34,13 @@ pub struct DevelopmentExport {
     rp_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum MinecraftBuild {
-    Standard,
-    Preview,
-    Education,
-}
-
 impl ExportPaths for DevelopmentExport {
     fn get_paths(&self, project_name: &str, profile_name: &str) -> Result<(PathBuf, PathBuf)> {
-        let mojang_dir = match &self.build {
-            Some(MinecraftBuild::Standard) | None => find_mojang_dir()?,
-            Some(MinecraftBuild::Preview) => find_preview_mojang_dir()?,
-            Some(MinecraftBuild::Education) => find_education_mojang_dir()?,
-        };
+        let mojang_dir = find_mojang_dir(self.build.as_ref())?;
         if !mojang_dir.exists() {
             bail!("Failed to find com.mojang directory")
         }
-        let eval = Eval::new(profile_name, &get_current_dir()?, &None);
+        let eval = Eval::new(profile_name, &get_current_dir()?, None);
         let bp = {
             let dir = mojang_dir.join("development_behavior_packs");
             if let Some(bp_name) = &self.bp_name {
@@ -89,7 +76,7 @@ impl ExportPaths for LocalExport {
         if !build.exists() {
             fs::create_dir(&build)?;
         }
-        let eval = Eval::new(profile_name, &get_current_dir()?, &None);
+        let eval = Eval::new(profile_name, &get_current_dir()?, None);
         let bp = if let Some(bp_name) = &self.bp_name {
             build.join(eval.string(bp_name)?)
         } else {
@@ -166,5 +153,51 @@ impl ExportPaths for NoneExport {
         let dot_regolith = PathBuf::from(".regolith");
         let temp = dot_regolith.join("tmp");
         Ok((temp.join("BP"), temp.join("RP")))
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldExport {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    build: Option<MinecraftBuild>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    world_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    world_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bp_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rp_name: Option<String>,
+}
+
+impl ExportPaths for WorldExport {
+    fn get_paths(&self, project_name: &str, profile_name: &str) -> Result<(PathBuf, PathBuf)> {
+        let world_dir = match (&self.world_name, &self.world_path) {
+            (Some(world_name), None) => find_world_dir(self.build.as_ref(), world_name)?,
+            (None, Some(world_path)) => resolve_path(world_path)?,
+            (Some(_), Some(_)) => bail!("Using both `worldName` and `worldPath` is not allowed"),
+            (None, None) => bail!(
+                "The `world` export target requires either a `worldName` or `worldPath property`"
+            ),
+        };
+        let eval = Eval::new(profile_name, &get_current_dir()?, None);
+        let bp = {
+            let dir = world_dir.join("behavior_packs");
+            if let Some(bp_name) = &self.bp_name {
+                dir.join(eval.string(bp_name)?)
+            } else {
+                dir.join(format!("{project_name}_bp"))
+            }
+        };
+        let rp = {
+            let dir = world_dir.join("resource_packs");
+            if let Some(rp_name) = &self.rp_name {
+                dir.join(eval.string(rp_name)?)
+            } else {
+                dir.join(format!("{project_name}_rp"))
+            }
+        };
+        Ok((bp, rp))
     }
 }

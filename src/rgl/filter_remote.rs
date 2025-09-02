@@ -21,11 +21,11 @@ impl Filter for RemoteFilter {
         for entry in &config.filters {
             if let Some(expression) = &entry.expression {
                 let name = &context.name;
-                let eval = Eval::new(name, &context.filter_dir, &None);
-                debug!("Evaluating expression <b>{expression}</>");
+                let eval = Eval::new(name, &context.filter_dir, None);
+                debug!("Evaluating expression: <d>{expression}</>");
                 if !eval
                     .bool(expression)
-                    .with_context(|| format!("Failed running evaluator for <b>{name}</>"))?
+                    .with_context(|| format!("Failed running evaluator for <filter>{name}</>"))?
                 {
                     continue;
                 }
@@ -110,14 +110,14 @@ impl RemoteFilter {
                     .args(["clone", &https_url, "."])
                     .current_dir(&repo_dir)
                     .run_silent()
-                    .context(format!("Failed to clone `{https_url}`"))?;
+                    .with_context(|| format!("Failed to clone `{https_url}`"))?;
             } else {
                 debug!("Fetching tags...");
                 Subprocess::new("git")
                     .args(["fetch", "--all"])
                     .current_dir(&repo_dir)
                     .run_silent()
-                    .context(format!("Failed to fetch latest tags from `{https_url}`"))?;
+                    .with_context(|| format!("Failed to fetch latest tags from `{https_url}`"))?;
             }
             let git_ref = Version::parse(version)
                 .map(|_| format!("{name}-{version}"))
@@ -127,7 +127,7 @@ impl RemoteFilter {
                 .args(["checkout", &git_ref])
                 .current_dir(&repo_dir)
                 .run_silent()
-                .context(format!("Failed to checkout `{git_ref}`"))?;
+                .with_context(|| format!("Failed to checkout `{git_ref}`"))?;
             copy_dir(repo_dir.join(name), &filter_dir)?;
         }
         if let Some(data_path) = data_path {
@@ -141,7 +141,7 @@ impl RemoteFilter {
 
         let filter = self.to_owned().into();
         let context = FilterContext::new(name, &filter)?;
-        info!("Installing dependencies for <b>{name}</>...");
+        info!("Installing dependencies for <filter>{name}</>...");
         filter.install_dependencies(&context)
     }
 
@@ -149,10 +149,10 @@ impl RemoteFilter {
         let current_version = self.version.to_owned();
         let latest_version = Resolver::resolve_version(name, &self.url, Some("latest".to_owned()))?;
         if current_version == latest_version {
-            warn!("Filter <b>{name}</> is already up-to-date");
+            warn!("Filter <filter>{name}</> is already up-to-date");
             return Ok(());
         }
-        info!("Updating filter <b>{name}</> <cyan>{current_version}</> → <cyan>{latest_version}</>...");
+        info!("Updating filter <filter>{name}</> <cyan>{current_version}</> → <cyan>{latest_version}</>...");
         self.version = latest_version.to_owned();
         self.install(name, data_path, force)?;
         Ok(())

@@ -21,16 +21,16 @@ impl Command for Run {
         let config = Config::load()?;
         let mut session = Session::lock()?;
 
-        runner(
+        smol::block_on(runner(
             &config,
             &self.profile,
             self.clean,
             self.compat || UserConfig::force_compat(),
-        )?;
+        ))?;
 
         session.unlock()
     }
     fn error_context(&self) -> String {
-        format!("Error running <b>{}</> profile", self.profile)
+        format!("Error running <profile>{}</> profile", self.profile)
     }
 }

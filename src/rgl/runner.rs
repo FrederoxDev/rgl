@@ -4,7 +4,7 @@ use crate::{debug, info, measure_time};
 use anyhow::{Context, Result};
 use std::fs;
 
-pub fn runner(config: &Config, profile_name: &str, clean: bool, compat: bool) -> Result<()> {
+pub async fn runner(config: &Config, profile_name: &str, clean: bool, compat: bool) -> Result<()> {
     let bp = config.get_behavior_pack();
     let rp = config.get_resource_pack();
     let data = config.get_data_path();
@@ -19,14 +19,13 @@ pub fn runner(config: &Config, profile_name: &str, clean: bool, compat: bool) ->
     let temp = Temp::from_dot_regolith();
 
     measure_time!("Setup temp", {
-        if !data.exists() {
-            fs::create_dir_all(&data)?;
-        }
         if clean {
             rimraf(&temp.root)?;
             rimraf(&target_bp)?;
             rimraf(&target_rp)?;
         }
+        fs::create_dir_all(&data)?;
+        fs::create_dir_all(&temp.root)?;
         if compat || is_none_export {
             if temp.bp.is_symlink() {
                 rimraf(&temp.bp)?;
@@ -37,8 +36,12 @@ pub fn runner(config: &Config, profile_name: &str, clean: bool, compat: bool) ->
             if temp.data.is_symlink() {
                 rimraf(&temp.data)?;
             }
-            sync_dir(bp, &temp.bp)?;
-            sync_dir(rp, &temp.rp)?;
+            if let Some(bp) = &bp {
+                sync_dir(bp, &temp.bp)?;
+            }
+            if let Some(rp) = &rp {
+                sync_dir(rp, &temp.rp)?;
+            }
             sync_dir(&data, &temp.data)?;
         } else {
             rimraf(&temp.bp)?;
@@ -46,41 +49,48 @@ pub fn runner(config: &Config, profile_name: &str, clean: bool, compat: bool) ->
             if temp.data.is_symlink() {
                 rimraf(&temp.data)?;
             }
-            sync_dir(bp, &target_bp)?;
-            sync_dir(rp, &target_rp)?;
+            if let Some(bp) = &bp {
+                sync_dir(bp, &target_bp)?;
+                symlink(&target_bp, &temp.bp)?;
+            }
+            if let Some(rp) = &rp {
+                sync_dir(rp, &target_rp)?;
+                symlink(&target_rp, &temp.rp)?;
+            }
             sync_dir(&data, &temp.data)?;
-            symlink(&target_bp, &temp.bp)?;
-            symlink(&target_rp, &temp.rp)?;
         }
     });
+    smol::future::yield_now().await;
 
     measure_time!(profile_name, {
-        info!("Running <b>{profile_name}</> profile");
-        let export_data_names = profile.run(config, &temp.root, profile_name)?;
+        info!("Running <profile>{profile_name}</> profile");
+        let export_data_names = profile.run(config, &temp.root, profile_name).await?;
         for name in export_data_names {
             let filter_data = temp.data.join(&name);
             if filter_data.is_dir() {
-                debug!("Exporting data for filter <b>{name}</>");
+                debug!("Exporting data for filter <filter>{name}</>");
                 sync_dir(filter_data, data.join(name))?;
             }
         }
     });
 
     measure_time!("Export project", {
-        if compat && !is_none_export {
-            sync_dir(&temp.bp, &target_bp)?;
-            sync_dir(&temp.rp, &target_rp)?;
+        info!("Exporting project to target location:");
+        let export = compat && !is_none_export;
+        if bp.is_some() {
+            println!("\tBP: {}", target_bp.display());
+            if export {
+                sync_dir(&temp.bp, &target_bp)?;
+            }
+        }
+        if rp.is_some() {
+            println!("\tRP: {}", target_rp.display());
+            if export {
+                sync_dir(&temp.rp, &target_rp)?;
+            }
         }
     });
 
-    info!(
-        "Applied changes to target location: \n\
-         \tBP: {} \n\
-         \tRP: {}",
-        target_bp.display(),
-        target_rp.display()
-    );
-
-    info!("Successfully ran the <b>{profile_name}</> profile");
+    info!("Successfully ran the <profile>{profile_name}</> profile");
     Ok(())
 }

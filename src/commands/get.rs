@@ -19,11 +19,11 @@ impl Command for Get {
         for (name, filter) in config.get_filters()? {
             match filter {
                 FilterDefinition::Remote(remote) => {
-                    info!("Downloading filter <b>{name}</>...");
+                    info!("Downloading filter <filter>{name}</>...");
                     remote.install(&name, Some(&data_path), false)?;
                 }
                 filter => {
-                    info!("Installing dependencies for <b>{name}</>...");
+                    info!("Installing dependencies for <filter>{name}</>...");
                     let context = FilterContext::new(&name, &filter)?;
                     filter.install_dependencies(&context)?;
                 }

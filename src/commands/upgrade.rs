@@ -36,7 +36,7 @@ impl Command for Upgrade {
             "{}/download/v{}/rgl-{}.zip",
             RELEASE_URL, latest_version, TARGET
         );
-        let bytes = download_pkg(&url).context(format!("Failed downloading {url}"))?;
+        let bytes = download_pkg(&url).with_context(|| format!("Failed downloading {url}"))?;
 
         info!("Upgrading rgl to {latest_version}");
         let temp = tempdir()?;

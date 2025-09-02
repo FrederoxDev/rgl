@@ -25,7 +25,7 @@ impl Command for Update {
                 if let FilterDefinition::Remote(mut remote) = definition {
                     remote
                         .update(&name, Some(&data_path), self.force)
-                        .context(format!("Failed to update filter {name}"))?;
+                        .with_context(|| format!("Failed to update filter <filter>{name}</>"))?;
                     config_cst.add_filter(&name, remote);
                 }
             }
@@ -35,10 +35,10 @@ impl Command for Update {
                 if let FilterDefinition::Remote(mut remote) = definition {
                     remote
                         .update(name, Some(&data_path), self.force)
-                        .context(format!("Failed to update filter {name}"))?;
+                        .with_context(|| format!("Failed to update filter <filter>{name}</>"))?;
                     config_cst.add_filter(name, remote);
                 } else {
-                    warn!("Filter <b>{name}</> is not a remote filter, skipping...");
+                    warn!("Filter <filter>{name}</> is not a remote filter, skipping...");
                 }
             }
         }

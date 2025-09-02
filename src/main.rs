@@ -1,8 +1,8 @@
 mod commands;
+mod file_watcher;
 mod fs;
 mod logger;
 mod rgl;
-mod watcher;
 
 use anyhow::{Context, Result};
 use clap::{crate_name, Parser, Subcommand};
@@ -15,7 +15,7 @@ fn main() {
     let cli = Cli::parse();
     Logger::set_debug(cli.debug);
     if let Err(e) = run_command(cli) {
-        error!("{}", e);
+        error!("{e}");
         e.chain().skip(1).for_each(|e| log!("<red>[+]</> {e}"));
         std::process::exit(1);
     }

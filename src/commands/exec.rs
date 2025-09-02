@@ -25,37 +25,41 @@ impl Command for Exec {
         let temp = Temp::from_dot_regolith();
 
         empty_dir(&temp.root)?;
-        copy_dir(&bp, &temp.bp)?;
-        copy_dir(&rp, &temp.rp)?;
+        if let Some(bp) = &bp {
+            copy_dir(bp, &temp.bp)?;
+        }
+        if let Some(rp) = &rp {
+            copy_dir(rp, &temp.rp)?;
+        }
         copy_dir(&data, &temp.data)?;
 
         if let Ok(filter) = config.get_filter(&self.filter) {
-            info!("Running filter <b>{}</>", self.filter);
+            info!("Running filter <filter>{}</>", self.filter);
             let context = FilterContext::new(&self.filter, &filter)?;
             filter.run(&context, &temp.root, &self.run_args)?;
         } else {
             let global_filters = GlobalFilters::load()?;
             let filter = global_filters.get(&self.filter)?.into();
-            info!("Running global filter <b>{}</>", self.filter);
+            info!("Running global filter <filter>{}</>", self.filter);
             let context = FilterContext::new(&self.filter, &filter)?;
             filter.run(&context, &temp.root, &self.run_args)?;
         }
 
-        info!(
-            "Applying changes to source directory: \n\
-             \tBP: {} \n\
-             \tRP: {}",
-            bp.display(),
-            rp.display()
-        );
-        sync_dir(temp.bp, bp)?;
-        sync_dir(temp.rp, rp)?;
+        info!("Applying changes to source directory:");
+        if let Some(bp) = bp {
+            println!("\tBP: {}", bp.display());
+            sync_dir(temp.bp, bp)?;
+        }
+        if let Some(rp) = rp {
+            println!("\tRP: {}", rp.display());
+            sync_dir(temp.rp, rp)?;
+        }
         sync_dir(temp.data, data)?;
 
-        info!("Successfully executed filter <b>{}</>", self.filter);
+        info!("Successfully executed filter <filter>{}</>", self.filter);
         session.unlock()
     }
     fn error_context(&self) -> String {
-        format!("Error executing filter <b>{}</>", self.filter)
+        format!("Error executing filter <filter>{}</>", self.filter)
     }
 }
