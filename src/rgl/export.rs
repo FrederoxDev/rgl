@@ -1,6 +1,4 @@
-use super::{
-    find_education_mojang_dir, find_mojang_dir, find_preview_mojang_dir, get_current_dir, Eval,
-};
+use super::{find_mojang_dir, get_current_dir, Eval, MinecraftBuild};
 use anyhow::{anyhow, bail, Result};
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
@@ -35,21 +33,9 @@ pub struct DevelopmentExport {
     rp_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum MinecraftBuild {
-    Standard,
-    Preview,
-    Education,
-}
-
 impl ExportPaths for DevelopmentExport {
     fn get_paths(&self, project_name: &str, profile_name: &str) -> Result<(PathBuf, PathBuf)> {
-        let mojang_dir = match &self.build {
-            Some(MinecraftBuild::Standard) | None => find_mojang_dir()?,
-            Some(MinecraftBuild::Preview) => find_preview_mojang_dir()?,
-            Some(MinecraftBuild::Education) => find_education_mojang_dir()?,
-        };
+        let mojang_dir = find_mojang_dir(self.build.as_ref())?;
         if !mojang_dir.exists() {
             bail!("Failed to find com.mojang directory")
         }
