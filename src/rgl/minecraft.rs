@@ -1,6 +1,7 @@
 use super::UserConfig;
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 
@@ -88,4 +89,30 @@ pub fn find_mojang_dir(build: Option<&MinecraftBuild>) -> Result<PathBuf> {
         Some(MinecraftBuild::Preview) => find_preview_mojang_dir(),
         Some(MinecraftBuild::Education) => find_education_mojang_dir(),
     }
+}
+
+pub fn find_world_dir(build: Option<&MinecraftBuild>, world_name: &str) -> Result<PathBuf> {
+    let mojang_dir = find_mojang_dir(build)?;
+    if !mojang_dir.exists() {
+        bail!("Failed to find com.mojang directory")
+    }
+
+    let mut worlds = HashMap::<String, PathBuf>::new();
+    for entry in mojang_dir.join("minecraftWorlds").read_dir()? {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+            continue;
+        }
+        let path = entry.path();
+        let name = std::fs::read_to_string(path.join("levelname.txt"))?;
+        if worlds.contains_key(&name) && name == world_name {
+            bail!("Found more than one world named <yellow>{name}</>");
+        }
+        worlds.insert(name, path);
+    }
+
+    worlds
+        .get(world_name)
+        .cloned()
+        .with_context(|| format!("World <yellow>{world_name}</> not found"))
 }

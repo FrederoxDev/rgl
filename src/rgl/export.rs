@@ -1,4 +1,4 @@
-use super::{find_mojang_dir, get_current_dir, Eval, MinecraftBuild};
+use super::{find_mojang_dir, find_world_dir, get_current_dir, Eval, MinecraftBuild};
 use anyhow::{anyhow, bail, Result};
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,7 @@ pub enum Export {
     Local(LocalExport),
     Exact(ExactExport),
     None(NoneExport),
+    World(WorldExport),
 }
 
 #[enum_dispatch(Export)]
@@ -152,5 +153,51 @@ impl ExportPaths for NoneExport {
         let dot_regolith = PathBuf::from(".regolith");
         let temp = dot_regolith.join("tmp");
         Ok((temp.join("BP"), temp.join("RP")))
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldExport {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    build: Option<MinecraftBuild>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    world_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    world_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bp_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rp_name: Option<String>,
+}
+
+impl ExportPaths for WorldExport {
+    fn get_paths(&self, project_name: &str, profile_name: &str) -> Result<(PathBuf, PathBuf)> {
+        let world_dir = match (&self.world_name, &self.world_path) {
+            (Some(world_name), None) => find_world_dir(self.build.as_ref(), world_name)?,
+            (None, Some(world_path)) => resolve_path(world_path)?,
+            (Some(_), Some(_)) => bail!("Using both `worldName` and `worldPath` is not allowed"),
+            (None, None) => bail!(
+                "The `world` export target requires either a `worldName` or `worldPath property`"
+            ),
+        };
+        let eval = Eval::new(profile_name, &get_current_dir()?, None);
+        let bp = {
+            let dir = world_dir.join("behavior_packs");
+            if let Some(bp_name) = &self.bp_name {
+                dir.join(eval.string(bp_name)?)
+            } else {
+                dir.join(format!("{project_name}_bp"))
+            }
+        };
+        let rp = {
+            let dir = world_dir.join("resource_packs");
+            if let Some(rp_name) = &self.rp_name {
+                dir.join(eval.string(rp_name)?)
+            } else {
+                dir.join(format!("{project_name}_rp"))
+            }
+        };
+        Ok((bp, rp))
     }
 }
