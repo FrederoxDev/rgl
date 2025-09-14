@@ -76,6 +76,8 @@ fn find_gdk_preview_mojang_dir() -> Result<PathBuf> {
     let localappdata = env::var("AppData")?;
     Ok(PathBuf::from(localappdata)
         .join("Minecraft Bedrock Preview")
+        .join("Users")
+        .join("Shared")
         .join("games")
         .join("com.mojang"))
 }
