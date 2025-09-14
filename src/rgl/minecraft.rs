@@ -10,6 +10,8 @@ use std::path::PathBuf;
 pub enum MinecraftBuild {
     Standard,
     Preview,
+    #[allow(non_camel_case_types)]
+    Preview_GDK,
     Education,
 }
 
@@ -69,6 +71,20 @@ fn find_preview_mojang_dir() -> Result<PathBuf> {
         .join("com.mojang"))
 }
 
+#[cfg(target_os = "windows")]
+fn find_gdk_preview_mojang_dir() -> Result<PathBuf> {
+    let localappdata = env::var("AppData")?;
+    Ok(PathBuf::from(localappdata)
+        .join("Minecraft Bedrock Preview")
+        .join("games")
+        .join("com.mojang"))
+}
+
+#[cfg(unix)]
+fn find_gdk_preview_mojang_dir() -> Result<PathBuf> {
+    mojang_dir()
+}
+
 #[cfg(unix)]
 fn find_education_mojang_dir() -> Result<PathBuf> {
     mojang_dir()
@@ -88,6 +104,7 @@ pub fn find_mojang_dir(build: Option<&MinecraftBuild>) -> Result<PathBuf> {
         Some(MinecraftBuild::Standard) | None => find_standard_mojang_dir(),
         Some(MinecraftBuild::Preview) => find_preview_mojang_dir(),
         Some(MinecraftBuild::Education) => find_education_mojang_dir(),
+        Some(MinecraftBuild::Preview_GDK) => find_gdk_preview_mojang_dir(),
     }
 }
 
